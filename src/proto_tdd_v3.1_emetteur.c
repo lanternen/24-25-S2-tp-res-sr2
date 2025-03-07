@@ -34,10 +34,11 @@ int main(int argc, char* argv[])
 
     int curseur = 0;    // on initialise un numéro de séquence (cf algo 2, TD)
     int borne_inf = 0;
-    paquet_t tab_p[8];  // cf algo 3 TD
+    paquet_t tab_p[SEQ_NUM_SIZE];  // cf algo 3 TD
     int evt;
     int duree_type = 200;   // à définir selon la durée de temporisateur souhaitée
-    int modulo = 8;     // à modifier selon le modulo souhaité
+    //int modulo = 16;     // à modifier selon le modulo souhaité
+    /* en fait, SEQ_NUM_SIZE joue déjà le rôle de modulo */
 
     /* ------------------------------------------------
     fonctionnalité pour rentrer la taille de la fenêtre
@@ -90,14 +91,14 @@ int main(int argc, char* argv[])
             if (borne_inf == curseur) {
                 depart_temporisateur(duree_type);
             }
-            curseur = inc(curseur, modulo);
+            curseur = inc(curseur, SEQ_NUM_SIZE);
         } else {
             evt = attendre();
             if (evt == -1) {
                 de_reseau(&pack);
                 if (verifier_controle(pack) && dans_fenetre(borne_inf, pack.num_seq, taille_fenetre)) {
                     //décalage fenêtre
-                    borne_inf = inc(pack.num_seq, modulo);
+                    borne_inf = inc(pack.num_seq, SEQ_NUM_SIZE);
                     if (borne_inf == curseur) {
                         // Tous les paquets sont acquittés
                         arret_temporisateur();
@@ -109,7 +110,7 @@ int main(int argc, char* argv[])
                 depart_temporisateur(duree_type);
                 while (i != curseur) {
                     vers_reseau(&tab_p[i]);
-                    i = inc(i, modulo);
+                    i = inc(i, SEQ_NUM_SIZE);
                 }
             }
 

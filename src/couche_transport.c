@@ -61,6 +61,6 @@ int inc(int num, int modulo) {
 }
 
 int taille_fenetre_correcte(int x) {
-    int w = 16 - 1;
+    int w = SEQ_NUM_SIZE - 1;
     return x < w;
 }

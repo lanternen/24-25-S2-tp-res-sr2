@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 
     uint8_t num_paquet_attendu = 0;
     pack.type = ACK;
-    int modulo = 8;
+    //int modulo = 16;
 
     init_reseau(RECEPTION);
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
                 pack.num_seq = num_paquet_attendu;
                 pack.somme_ctrl = generer_controle(pack);
                 
-                num_paquet_attendu = inc(num_paquet_attendu, modulo);
+                num_paquet_attendu = inc(num_paquet_attendu, SEQ_NUM_SIZE);
             } else {
                 // cas hors-séquence
 

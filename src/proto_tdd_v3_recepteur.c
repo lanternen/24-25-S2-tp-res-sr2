@@ -23,8 +23,9 @@ int main(int argc, char* argv[])
 
     paquet_t pack;  // le paquet d'acquittement
 
-    uint8_t paquet_attendu = 0;
+    uint8_t num_paquet_attendu = 0;
     pack.type = ACK;
+    int modulo = 8;
 
     init_reseau(RECEPTION);
 
@@ -40,7 +41,7 @@ int main(int argc, char* argv[])
 
         if (verifier_controle(paquet)) {
             
-            if (paquet.num_seq == paquet_attendu) {
+            if (paquet.num_seq == num_paquet_attendu) {
                 // cas où le paquet reçu est en séquence
 
                 /* extraction des donnees du paquet recu */
@@ -50,10 +51,10 @@ int main(int argc, char* argv[])
                 /* remise des données à la couche application */
                 fin = vers_application(message, paquet.lg_info);
                 
+                pack.num_seq = num_paquet_attendu;
                 pack.somme_ctrl = generer_controle(pack);
-                pack.num_seq = paquet_attendu;
                 
-                paquet_attendu = inc(paquet_attendu, 2);
+                num_paquet_attendu = inc(num_paquet_attendu, modulo);
             } else {
                 // cas hors-séquence
 

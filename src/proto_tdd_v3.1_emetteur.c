@@ -31,7 +31,6 @@ int main(int argc, char* argv[])
     }
 
     paquet_t pack; // le packet d'acquittement
-
     int curseur = 0;    // on initialise un numéro de séquence (cf algo 2, TD)
     int borne_inf = 0;
     paquet_t tab_p[SEQ_NUM_SIZE];  // cf algo 3 TD
@@ -57,41 +56,48 @@ int main(int argc, char* argv[])
         taille_fenetre = 4;
     }
 
-
+    /*-------------------------
+    | début de la transmission |
+     ------------------------ */
 
     init_reseau(EMISSION);
 
     printf("[TRP] Initialisation reseau : OK.\n");
     printf("[TRP] Debut execution protocole transport.\n");
 
+    /* lecture de donnees provenant de la couche application */
+    de_application(message, &taille_msg);
 
     /* tant que l'émetteur a des données à envoyer */
     while ( taille_msg != 0 ) {
         
         if (dans_fenetre(borne_inf, curseur, taille_fenetre)) {
-            
-            /* lecture de donnees provenant de la couche application */
-            de_application(message, &taille_msg);
 
             /* construction paquet */
             for (int i=0; i<taille_msg; i++) {
                 tab_p[curseur].info[i] = message[i];
             }
+            // possibilité de faire ?
+            // tab_p[curseur].info = message;
+            // quelque chose comme ça
             tab_p[curseur].lg_info = taille_msg;
             tab_p[curseur].type = DATA;
-
             tab_p[curseur].num_seq = curseur;   // le paquet prend son numéro de séquence (cf algo 2, TD)
-
             // générer contrôle 
             tab_p[curseur].somme_ctrl = generer_controle(tab_p[curseur]);
-        
+
+            printf("le paquet envoyé a le numéro de séquence : \t%d \n", tab_p[curseur].num_seq);
             /* remise à la couche reseau */
             vers_reseau(&tab_p[curseur]);
 
             if (borne_inf == curseur) {
                 depart_temporisateur(duree_type);
             }
+            // incrément du curseur
             curseur = inc(curseur, SEQ_NUM_SIZE);
+
+            /* lecture de donnees provenant de la couche application */
+            de_application(message, &taille_msg);
         } else {
             evt = attendre();
             if (evt == -1) {

@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
     int borne_inf = 0;
     paquet_t tab_p[SEQ_NUM_SIZE];  // cf algo 3 TD
     int evt;
-    int duree_type = 200;   // à définir selon la durée de temporisateur souhaitée
+    int duree_type = 300;   // à définir selon la durée de temporisateur souhaitée
     //int modulo = 16;     // à modifier selon le modulo souhaité
     /* en fait, SEQ_NUM_SIZE joue déjà le rôle de modulo */
 

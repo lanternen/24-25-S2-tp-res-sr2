@@ -70,9 +70,10 @@ int main(int argc, char* argv[])
     de_application(message, &taille_msg);
 
     /* tant que l'émetteur a des données à envoyer */
-    while ( taille_msg != 0 ) {
-        
-        if (dans_fenetre(borne_inf, curseur, taille_fenetre)) {
+    while ( (taille_msg != 0) || (curseur != borne_inf) ) {
+        // ci-dessus : pansement pour permettre d'envoyer jusqu'au bout
+        // boucle infinie côté émetteur -> résolue avec sleep() côté récepteur
+        if ((dans_fenetre(borne_inf, curseur, taille_fenetre)) && (taille_msg > 0)) {
 
             /* construction paquet */
             for (int i=0; i<taille_msg; i++) {
@@ -100,6 +101,7 @@ int main(int argc, char* argv[])
             /* lecture de donnees provenant de la couche application */
             de_application(message, &taille_msg);
         } else {
+            
             evt = attendre();
             if (evt == -1) {
                 de_reseau(&pack);
@@ -147,6 +149,7 @@ int main(int argc, char* argv[])
             }
 
         }                 
+
             
     }
 

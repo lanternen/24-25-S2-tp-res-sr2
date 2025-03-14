@@ -13,6 +13,7 @@
 #include "services_reseau.h"
 
 #include <stdlib.h>
+#include <unistd.h>
 
 /* =============================== */
 /* Programme principal - émetteur  */
@@ -69,9 +70,9 @@ int main(int argc, char* argv[])
     de_application(message, &taille_msg);
 
     /* tant que l'émetteur a des données à envoyer */
-    while ( taille_msg != 0 ) {
+    while ( (taille_msg != 0) || (curseur != borne_inf) ) {
         
-        if (dans_fenetre(borne_inf, curseur, taille_fenetre)) {
+        if (dans_fenetre(borne_inf, curseur, taille_fenetre) && (taille_msg > 0)) {
 
             /* construction paquet */
             for (int i=0; i<taille_msg; i++) {
@@ -100,7 +101,7 @@ int main(int argc, char* argv[])
             de_application(message, &taille_msg);
         } else {
             evt = attendre();
-            if (evt == -1) {
+            if (evt == -1) {    // -1 <==> un paquet est disponible
                 de_reseau(&pack);
                 if (verifier_controle(pack) && dans_fenetre(borne_inf, pack.num_seq, taille_fenetre)) {
                     //décalage fenêtre

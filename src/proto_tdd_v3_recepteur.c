@@ -11,6 +11,7 @@
 #include "application.h"
 #include "couche_transport.h"
 #include "services_reseau.h"
+#include <unistd.h>
 
 /* =============================== */
 /* Programme principal - récepteur */
@@ -26,6 +27,7 @@ int main(int argc, char* argv[])
     uint8_t num_paquet_attendu = 0;
     // pack.num_seq = SEQ_NUM_SIZE -1; // au cas où le 1er paquet envoyé est perdu
     //int modulo = 16;
+    int duree_type = 100;
 
     init_reseau(RECEPTION);
 
@@ -45,15 +47,17 @@ int main(int argc, char* argv[])
                 // cas où le paquet reçu est en séquence
                 printf("pack num seq : \t\t%d\n num paquet attendu : \t%d\n", pack.num_seq, num_paquet_attendu);
 
-                /* extraction des donnees du paquet recu */
-                for (int i=0; i<paquet.lg_info; i++) {
-                    message[i] = paquet.info[i];
-                }
+                //on prépare l'acquittement
                 pack.type = ACK;
                 pack.num_seq = num_paquet_attendu;
                 pack.lg_info = 0;
                 pack.somme_ctrl = generer_controle(pack);
 
+                /* extraction des donnees du paquet recu */
+                for (int i=0; i<paquet.lg_info; i++) {
+                    message[i] = paquet.info[i];
+                }
+                
                 /* remise des données à la couche application */
                 fin = vers_application(message, paquet.lg_info);
                 num_paquet_attendu = inc(num_paquet_attendu, SEQ_NUM_SIZE);
@@ -73,6 +77,20 @@ int main(int argc, char* argv[])
         } 
         
     }
+
+    /* tant que je reçois encore des paquets, j'envoie les ack */
+    depart_temporisateur(duree_type);
+    int evt = attendre();
+    while (evt == -1) {
+        arret_temporisateur(); //on arrête le timer lancé juste avant la boucle
+        de_reseau(&paquet); // on regarde ce qu'on a reçu
+        pack.type = ACK;            // on renvoie l'acquittement (qui s'est probablement perdu la fois d'avant)
+        pack.num_seq = num_paquet_attendu;
+        pack.lg_info = 0;
+        pack.somme_ctrl = generer_controle(pack);
+        evt = attendre();
+    }
+    // le mérite revient aux explications de l'encadrant de TP
 
     printf("[TRP] Fin execution protocole transport.\n");
     return 0;

@@ -50,4 +50,6 @@ int inc(int num, int modulo);
 
 int taille_fenetre_correcte(int x);
 
+int taille_fenetre_correcte_SR(int x);
+
 #endif

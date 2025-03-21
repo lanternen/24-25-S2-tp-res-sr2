@@ -31,18 +31,17 @@ int main(int argc, char* argv[])
     }
 
     paquet_t pack; // le packet d'acquittement
-    int curseur = 0;    // on initialise un numéro de séquence (cf algo 2, TD)
+    int curseur = 0;
     int borne_inf = 0;
     paquet_t tab_p[SEQ_NUM_SIZE];  // cf algo 3 TD
     int evt;
-    int duree_type = 300;   // à définir selon la durée de temporisateur souhaitée
-    //int modulo = 16;     // à modifier selon le modulo souhaité
-    /* en fait, SEQ_NUM_SIZE joue déjà le rôle de modulo */
-    int ack_dupplique = 0;
+    int duree_type = 250;   // à définir selon la durée de temporisateur souhaitée
+    int booleens_ack[SEQ_NUM_SIZE] = {0};
 
-    /* ------------------------------------------------
-    fonctionnalité pour rentrer la taille de la fenêtre
-    --------------------------------------------------- */
+
+    /* --------------------------------------------------
+       fonctionnalité pour rentrer la taille de la fenêtre
+       --------------------------------------------------- */
     int taille_fenetre;
     if (argc == 2) {
         int inter = atoi(argv[1]);
@@ -71,99 +70,78 @@ int main(int argc, char* argv[])
 
 
 
-
-
-    /* 
-    
-    modifier en-dessous
-    
-    */
-
-
-
-
-
-
-
-
-
     /* tant que l'émetteur a des données à envoyer */
-    while ( (taille_msg != 0) || (curseur != borne_inf) ) {
-        // ci-dessus : pansement pour permettre d'envoyer jusqu'au bout
-        // boucle infinie côté émetteur -> résolue avec sleep() côté récepteur
+    while ( taille_msg != 0 ) {
+
         if ((dans_fenetre(borne_inf, curseur, taille_fenetre)) && (taille_msg > 0)) {
 
             /* construction paquet */
             for (int i=0; i<taille_msg; i++) {
                 tab_p[curseur].info[i] = message[i];
             }
-            // possibilité de faire ?
-            // tab_p[curseur].info = message;
-            // quelque chose comme ça
             tab_p[curseur].lg_info = taille_msg;
             tab_p[curseur].type = DATA;
-            tab_p[curseur].num_seq = curseur;   // le paquet prend son numéro de séquence (cf algo 2, TD)
-            // générer contrôle 
+            tab_p[curseur].num_seq = curseur;
             tab_p[curseur].somme_ctrl = generer_controle(tab_p[curseur]);
 
-            printf("le paquet envoyé a le numéro de séquence : \t%d \n", tab_p[curseur].num_seq);
+            // printf("le paquet envoyé a le numéro de séquence : \t%d \n", tab_p[curseur].num_seq);
             /* remise à la couche reseau */
             vers_reseau(&tab_p[curseur]);
 
-            if (borne_inf == curseur) {
-                depart_temporisateur(duree_type);
-            }
+            //lancer le temporisateur correspondant au paquet envoyé
+            depart_temporisateur_num(curseur, duree_type);
+        
             // incrément du curseur
             curseur = inc(curseur, SEQ_NUM_SIZE);
 
             /* lecture de donnees provenant de la couche application */
             de_application(message, &taille_msg);
+
         } else {
-            
+            // si on a plus de paquets à envoyer
             evt = attendre();
+            // si un ack est reçu
             if (evt == -1) {
                 de_reseau(&pack);
-                int prevision = inc(pack.num_seq, SEQ_NUM_SIZE);
 
                 if (verifier_controle(pack) && dans_fenetre(borne_inf, pack.num_seq, taille_fenetre)) {
                     //décalage fenêtre
                     printf("Ack reçu : n°%d\n", pack.num_seq);
-                    borne_inf = inc(pack.num_seq, SEQ_NUM_SIZE);
-                    if (borne_inf == curseur) {
-                        // Tous les paquets sont acquittés
-                        arret_temporisateur();
-                    }
-                } else if (verifier_controle(pack) && prevision == borne_inf) {
-                    // on incrémente le num de l'ack reçu (prevision). S'il est alors égal à borne_inf,
-                    // c'est qu'il est duppliqué
-                    ack_dupplique++;
-                    if (ack_dupplique == 3) {
-                        arret_temporisateur();
-                        int i = borne_inf;
-                        depart_temporisateur(duree_type);
-                        while (i != curseur) {
-                            vers_reseau(&tab_p[i]);
-                            i = inc(i, SEQ_NUM_SIZE);
+                    
+                    if (borne_inf == pack.num_seq) {
+                        //  && l'acquittement reçu correspond au début de notre fenêtre
+                        borne_inf = inc(pack.num_seq, SEQ_NUM_SIZE);
+
+                        //on arrête le temporaisateur correspondant
+                        arret_temporisateur_num(pack.num_seq);
+
+                        //on remet l'acquittement à 'faux' dans le tableau d'acquittements
+                        booleens_ack[pack.num_seq] = 0;
+
+                        // tant que les paquets sont acquittés, on peut incrémenter borne_inf
+                        while (booleens_ack[borne_inf] != 0) {
+                            borne_inf = inc(borne_inf, SEQ_NUM_SIZE);
+                            booleens_ack[borne_inf] = 0;
                         }
 
-                        // on remet ack_dupplique à 0, puisqu'on ne retransmet qu'une fois
-                        ack_dupplique = 0;
-                        
-                        /* -----------------------
-                                IMPORTANT 
-                         ------------------------- */
-                        // faire fonction retransmission pour factoriser code
+                    } else {
+                        // on met à vrai dans le tableau des acquittements
+                        booleens_ack[pack.num_seq] = 1;
 
+                        // on arrête le temporaisateur correspondant
+                        arret_temporisateur_num(pack.num_seq);
                     }
+
+                  
                 }
             } else {
                 // Timer expire
-                int i = borne_inf;
-                depart_temporisateur(duree_type);
-                while (i != curseur) {
-                    vers_reseau(&tab_p[i]);
-                    i = inc(i, SEQ_NUM_SIZE);
-                }
+                // evt prend la valeur du temporisateur qui a expiré
+                //on lance le temporisateur du message à renvoyé
+                depart_temporisateur_num(evt, duree_type);
+                //le message a renvoyé est à l'indice evt du tableau
+                vers_reseau(&tab_p[evt]);
+                    
             }
 
         }                 

@@ -3,8 +3,8 @@
 
 # Fichiers pour application
 #---------------------------
-FICHIER_IN fichiers/soleil.jpg
-FICHIER_OUT fichiers/soleilrecu.jpg
+FICHIER_IN fichiers/lion.jpg
+FICHIER_OUT fichiers/lionrecu2.jpg
 
 # Initialisation réseau
 #------------------------

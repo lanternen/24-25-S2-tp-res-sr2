@@ -19,42 +19,47 @@
 /* =============================== */
 int main(int argc, char* argv[])
 {
-    unsigned char message[MAX_INFO]; /* message de l'application */
-    int taille_msg; /* taille du message */
-    // paquet_t paquet; /* paquet utilisé par le protocole */
-
-
-    // si argc == 1 la fenetre est 'par défaut', sinon, elle est de taille argv[1]
-    if (argc > 2) {
-        perror ("Trop d'arguments\n");
-        exit(2);
-    }
-
-    paquet_t pack; // le packet d'acquittement
-    int curseur = 0;
-    int borne_inf = 0;
-    paquet_t tab_p[SEQ_NUM_SIZE];  // cf algo 3 TD
-    int evt;
-    int duree_type = 250;   // à définir selon la durée de temporisateur souhaitée
-    int booleens_ack[SEQ_NUM_SIZE] = {0};
-
-
     /* --------------------------------------------------
        fonctionnalité pour rentrer la taille de la fenêtre
        --------------------------------------------------- */
+    // si argc == 1 la fenetre est 'par défaut', sinon, elle est de taille argv[1]
+    if (argc > 2) {
+       perror ("Trop d'arguments\n");
+       exit(2);
+    }
+
     int taille_fenetre;
     if (argc == 2) {
         int inter = atoi(argv[1]);
         // pour respecter la règle de SR en w / 2 <= n 
         if (taille_fenetre_correcte_SR(inter)){
-            taille_fenetre = inter;
+           taille_fenetre = inter;
         } else {
             perror("taille de fenetre trop grande, tdd3.1 emetteur\n");
             exit(3);
         }
     } else {
-        taille_fenetre = 4;
-    }
+       taille_fenetre = 4;
+    }    
+
+
+    /* --------------------------
+       Déclaration des variables
+     ---------------------------- */
+
+    unsigned char message[MAX_INFO]; /* message de l'application */
+    int taille_msg; /* taille du message */
+    // paquet_t paquet; /* paquet utilisé par le protocole */
+
+    paquet_t pack; // le packet d'acquittement
+    int curseur = 0;
+    int borne_inf = 0;
+    int evt;
+    int duree_type = 250;   // à définir selon la durée de temporisateur souhaitée
+    paquet_t tab_p[SEQ_NUM_SIZE];  // cf algo 3 TD
+    int booleens_ack[SEQ_NUM_SIZE] = {0};
+
+
 
     /*-------------------------
     | début de la transmission |
@@ -69,9 +74,8 @@ int main(int argc, char* argv[])
     de_application(message, &taille_msg);
 
 
-
     /* tant que l'émetteur a des données à envoyer */
-    while ( taille_msg != 0 ) {
+    while ( taille_msg != 0 || (curseur != borne_inf) ) {
 
         if ((dans_fenetre(borne_inf, curseur, taille_fenetre)) && (taille_msg > 0)) {
 
@@ -105,31 +109,25 @@ int main(int argc, char* argv[])
                 de_reseau(&pack);
 
                 if (verifier_controle(pack) && dans_fenetre(borne_inf, pack.num_seq, taille_fenetre)) {
-                    //décalage fenêtre
-                    printf("Ack reçu : n°%d\n", pack.num_seq);
                     
-                    if (borne_inf == pack.num_seq) {
-                        //  && l'acquittement reçu correspond au début de notre fenêtre
-                        borne_inf = inc(pack.num_seq, SEQ_NUM_SIZE);
-
-                        //on arrête le temporaisateur correspondant
-                        arret_temporisateur_num(pack.num_seq);
-
+                    printf("Ack reçu : n°%d\n", pack.num_seq);
+                    arret_temporisateur_num(pack.num_seq); // on arrête le temporaisateur correspondant
+                    
+                    if (borne_inf == pack.num_seq) {    // cas où on peut décaler la fenêtre
+                        // l'acquittement reçu correspond au début de notre fenêtre
                         //on remet l'acquittement à 'faux' dans le tableau d'acquittements
                         booleens_ack[pack.num_seq] = 0;
+                        borne_inf = inc(pack.num_seq, SEQ_NUM_SIZE);
 
                         // tant que les paquets sont acquittés, on peut incrémenter borne_inf
                         while (booleens_ack[borne_inf] != 0) {
-                            borne_inf = inc(borne_inf, SEQ_NUM_SIZE);
                             booleens_ack[borne_inf] = 0;
+                            borne_inf = inc(borne_inf, SEQ_NUM_SIZE);
                         }
 
-                    } else {
+                    } else {    // cas où on ne peut pas décaler la fenêtre
                         // on met à vrai dans le tableau des acquittements
                         booleens_ack[pack.num_seq] = 1;
-
-                        // on arrête le temporaisateur correspondant
-                        arret_temporisateur_num(pack.num_seq);
                     }
 
                   
